@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Süper Lig Fantasy</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <meta name="description" content="Türkiye Süper Lig Fantasy Oyunu">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: white;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .balance {
+            background: rgba(255,255,255,0.2);
+            padding: 15px 30px;
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .pack-selection {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        
+        .pack-card {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 3px solid transparent;
+        }
+        
+        .pack-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255,255,255,0.25);
+            border-color: rgba(255,255,255,0.5);
+        }
+        
+        .pack-card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .pack-icon {
+            font-size: 60px;
+            margin-bottom: 15px;
+        }
+        
+        .pack-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .pack-price {
+            font-size: 18px;
+            color: #ffd700;
+        }
+        
+        .pack-opening {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .pack-opening.active {
+            display: flex;
+        }
+        
+        .cards-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 90%;
+        }
+        
+        .player-card {
+            width: 200px;
+            height: 300px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            border-radius: 15px;
+            padding: 20px;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: cardFlip 1s ease-out forwards;
+            opacity: 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        
+        @keyframes cardFlip {
+            0% {
+                transform: rotateY(180deg) scale(0.5);
+                opacity: 0;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                transform: rotateY(0deg) scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .player-card.legendary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            box-shadow: 0 0 30px rgba(245, 87, 108, 0.8);
+        }
+        
+        .player-card.epic {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            box-shadow: 0 0 25px rgba(79, 172, 254, 0.7);
+        }
+        
+        .player-card.rare {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            box-shadow: 0 0 20px rgba(67, 233, 123, 0.6);
+        }
+        
+        .player-card.common {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+        
+        .rarity-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 30px;
+        }
+        
+        .player-info {
+            text-align: center;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        .player-name {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 40px;
+        }
+        
+        .player-overall {
+            font-size: 48px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .player-position {
+            font-size: 18px;
+            background: rgba(0,0,0,0.3);
+            padding: 5px 15px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+        
+        .player-club {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .close-btn {
+            position: fixed;
+            bottom: 30px;
+            background: rgba(255,255,255,0.2);
+            border: 2px solid white;
+            color: white;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 18px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+        
+        .close-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚽ Süper Lig Fantasy</h1>
+        <div class="balance">💰 <span id="coins">1000</span> Coin</div>
+    </div>
+    
+    <div class="pack-selection" id="packSelection">
+        <div class="pack-card" data-pack="common" data-price="1000">
+            <div class="pack-icon">⚪</div>
+            <div class="pack-name">Common Paket</div>
+            <div class="pack-price">1000 💰</div>
+        </div>
+        
+        <div class="pack-card" data-pack="rare" data-price="2000">
+            <div class="pack-icon">⭐</div>
+            <div class="pack-name">Rare Paket</div>
+            <div class="pack-price">2000 💰</div>
+        </div>
+        
+        <div class="pack-card" data-pack="epic" data-price="3000">
+            <div class="pack-icon">💎</div>
+            <div class="pack-name">Epic Paket</div>
+            <div class="pack-price">3000 💰</div>
+        </div>
+        
+        <div class="pack-card" data-pack="legendary" data-price="5000">
+            <div class="pack-icon">🌟</div>
+            <div class="pack-name">Legendary Paket</div>
+            <div class="pack-price">5000 💰</div>
+        </div>
+    </div>
+    
+    <div class="pack-opening" id="packOpening">
+        <div class="cards-container" id="cardsContainer"></div>
+        <button class="close-btn" onclick="closePackOpening()">Kapat</button>
+    </div>
+
+    <script>
+        let userData = {
+            coins: 1000,
+            cards: []
+        };
+        
+        const PLAYERS = {
+            legendary: [
+                {name: "Osimhen", overall: 89, position: "FW", club: "Galatasaray"},
+                {name: "Icardi", overall: 87, position: "FW", club: "Galatasaray"},
+                {name: "Mertens", overall: 86, position: "FW", club: "Galatasaray"},
+                {name: "Torreira", overall: 86, position: "MF", club: "Galatasaray"},
+                {name: "Gündoğan", overall: 88, position: "MF", club: "Galatasaray"},
+                {name: "Dzeko", overall: 85, position: "FW", club: "Fenerbahçe"},
+                {name: "Tadic", overall: 86, position: "MF", club: "Fenerbahçe"},
+                {name: "En-Nesyri", overall: 85, position: "FW", club: "Fenerbahçe"},
+                {name: "Immobile", overall: 86, position: "FW", club: "Beşiktaş"},
+                {name: "Rafa Silva", overall: 85, position: "FW", club: "Beşiktaş"}
+            ],
+            epic: [
+                {name: "Ziyech", overall: 83, position: "MF", club: "Galatasaray"},
+                {name: "Muslera", overall: 83, position: "GK", club: "Galatasaray"},
+                {name: "Bardakçı", overall: 82, position: "DF", club: "Galatasaray"},
+                {name: "Gabriel Sara", overall: 83, position: "MF", club: "Galatasaray"},
+                {name: "Livakovic", overall: 84, position: "GK", club: "Fenerbahçe"},
+                {name: "Fred", overall: 83, position: "MF", club: "Fenerbahçe"},
+                {name: "Szymanski", overall: 82, position: "MF", club: "Fenerbahçe"},
+                {name: "Saint-Maximin", overall: 83, position: "FW", club: "Fenerbahçe"},
+                {name: "Mert Günok", overall: 81, position: "GK", club: "Beşiktaş"},
+                {name: "Rashica", overall: 81, position: "FW", club: "Beşiktaş"},
+                {name: "Uğurcan Çakır", overall: 82, position: "GK", club: "Trabzonspor"},
+                {name: "Visca", overall: 81, position: "MF", club: "Trabzonspor"}
+            ],
+            rare: [
+                {name: "Yunus Akgün", overall: 78, position: "FW", club: "Galatasaray"},
+                {name: "Barış Alper", overall: 77, position: "MF", club: "Galatasaray"},
+                {name: "Nelsson", overall: 78, position: "DF", club: "Galatasaray"},
+                {name: "İrfan Can Kahveci", overall: 79, position: "MF", club: "Fenerbahçe"},
+                {name: "İsmail Yüksek", overall: 78, position: "MF", club: "Fenerbahçe"},
+                {name: "Ferdi Kadıoğlu", overall: 79, position: "DF", club: "Fenerbahçe"},
+                {name: "Semih Kılıçsoy", overall: 76, position: "FW", club: "Beşiktaş"},
+                {name: "Salih Özcan", overall: 78, position: "MF", club: "Beşiktaş"},
+                {name: "Ozan Tufan", overall: 78, position: "MF", club: "Trabzonspor"},
+                {name: "Piątek", overall: 79, position: "FW", club: "Başakşehir"},
+                {name: "Deniz Türüç", overall: 77, position: "MF", club: "Başakşehir"},
+                {name: "Carlo Holse", overall: 76, position: "FW", club: "Samsunspor"}
+            ],
+            common: [
+                {name: "Berkan Kutlu", overall: 74, position: "MF", club: "Galatasaray"},
+                {name: "Elias Jelert", overall: 73, position: "DF", club: "Galatasaray"},
+                {name: "Mert Hakan Yandaş", overall: 75, position: "MF", club: "Fenerbahçe"},
+                {name: "Miguel Crespo", overall: 73, position: "MF", club: "Fenerbahçe"},
+                {name: "Necip Uysal", overall: 73, position: "MF", club: "Beşiktaş"},
+                {name: "Enis Bardhi", overall: 74, position: "MF", club: "Trabzonspor"},
+                {name: "Berkay Özcan", overall: 73, position: "MF", club: "Başakşehir"},
+                {name: "Emre Kılınç", overall: 73, position: "MF", club: "Samsunspor"},
+                {name: "Haris Hajradinovic", overall: 74, position: "MF", club: "Kasımpaşa"},
+                {name: "Sokol Cikalleshi", overall: 73, position: "FW", club: "Konyaspor"},
+                {name: "Deian Sorescu", overall: 73, position: "MF", club: "Gaziantep"},
+                {name: "Rachid Ghezzal", overall: 74, position: "MF", club: "Rizespor"},
+                {name: "Kuryu Matsuki", overall: 73, position: "MF", club: "Göztepe"},
+                {name: "Hwang Ui-jo", overall: 73, position: "FW", club: "Alanyaspor"},
+                {name: "Rey Manaj", overall: 73, position: "FW", club: "Sivasspor"}
+            ]
+        };
+        
+        const PACK_WEIGHTS = {
+            common: {common: 0.60, rare: 0.30, epic: 0.09, legendary: 0.01},
+            rare: {common: 0.30, rare: 0.50, epic: 0.18, legendary: 0.02},
+            epic: {common: 0.10, rare: 0.40, epic: 0.45, legendary: 0.05},
+            legendary: {common: 0.00, rare: 0.20, epic: 0.60, legendary: 0.20}
+        };
+        
+        function getRarityEmoji(rarity) {
+            const emojis = {
+                legendary: "🌟",
+                epic: "💎",
+                rare: "⭐",
+                common: "⚪"
+            };
+            return emojis[rarity];
+        }
+        
+        function openPack(packType) {
+            const cards = [];
+            const weights = PACK_WEIGHTS[packType];
+            const usedPlayers = new Set();
+            
+            for (let i = 0; i < 5; i++) {
+                const rand = Math.random();
+                let cumulative = 0;
+                let selectedRarity = "common";
+                
+                for (const [rarity, weight] of Object.entries(weights)) {
+                    cumulative += weight;
+                    if (rand <= cumulative) {
+                        selectedRarity = rarity;
+                        break;
+                    }
+                }
+                
+                // Aynı oyuncuyu çekme
+                let player;
+                let attempts = 0;
+                do {
+                    const rarityPlayers = PLAYERS[selectedRarity];
+                    player = rarityPlayers[Math.floor(Math.random() * rarityPlayers.length)];
+                    attempts++;
+                } while (usedPlayers.has(player.name) && attempts < 50);
+                
+                usedPlayers.add(player.name);
+                
+                cards.push({
+                    ...player,
+                    rarity: selectedRarity,
+                    id: `${player.name}_${Date.now()}_${i}`
+                });
+            }
+            
+            return cards;
+        }
+        
+        function displayCards(cards) {
+            const container = document.getElementById('cardsContainer');
+            container.innerHTML = '';
+            
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    const cardEl = document.createElement('div');
+                    cardEl.className = `player-card ${card.rarity}`;
+                    cardEl.style.animationDelay = `${index * 0.2}s`;
+                    
+                    cardEl.innerHTML = `
+                        <div class="rarity-badge">${getRarityEmoji(card.rarity)}</div>
+                        <div class="player-info">
+                            <div class="player-name">${card.name}</div>
+                            <div class="player-overall">${card.overall}</div>
+                            <div>
+                                <div class="player-position">${card.position}</div>
+                                <div class="player-club">${card.club}</div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(cardEl);
+                }, index * 200);
+            });
+        }
+        
+        function closePackOpening() {
+            document.getElementById('packOpening').classList.remove('active');
+            updateBalance();
+        }
+        
+        function updateBalance() {
+            document.getElementById('coins').textContent = userData.coins;
+            
+            // Paket kartlarını güncelle
+            document.querySelectorAll('.pack-card').forEach(card => {
+                const price = parseInt(card.dataset.price);
+                if (userData.coins < price) {
+                    card.classList.add('disabled');
+                } else {
+                    card.classList.remove('disabled');
+                }
+            });
+        }
+        
+        document.querySelectorAll('.pack-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const packType = this.dataset.pack;
+                const price = parseInt(this.dataset.price);
+                
+                if (userData.coins < price) {
+                    alert('Yetersiz coin!');
+                    return;
+                }
+                
+                userData.coins -= price;
+                const cards = openPack(packType);
+                userData.cards.push(...cards);
+                
+                document.getElementById('packOpening').classList.add('active');
+                displayCards(cards);
+                
+                // Telegram'a veri gönder (opsiyonel)
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.sendData(JSON.stringify({
+                        action: 'pack_opened',
+                        packType: packType,
+                        cards: cards,
+                        remainingCoins: userData.coins
+                    }));
+                }
+            });
+        });
+        
+        // Telegram Web App başlatma
+        if (window.Telegram?.WebApp) {
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand();
+        }
+        
+        updateBalance();
+    </script>
+</body>
+</html>
